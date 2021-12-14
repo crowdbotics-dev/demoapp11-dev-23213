@@ -46,14 +46,90 @@ public class MainApplication extends Application implements ReactApplication {
     SoLoader.init(this, /* native exopackage */ false);
     initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
   }
+class LoginActivity : BaseClassActivity() {
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContentView(R.layout.login_activity)
+    val button = findViewById<ImageView>(R.id.plusbutton)
+    val forgotpassword=findViewById<TextView>(R.id.forgotpassword)
+    button.setOnClickListener {
+        val i = Intent(applicationContext, RegisterActivity::class.java)
+        startActivity(i)
+    }
+    forgotpassword.setOnClickListener{
+        val i = Intent(applicationContext, ForgotPassword::class.java)
+        startActivity(i)
+    }
 
-  /**
-   * Loads Flipper in React Native templates. Call this in the onCreate method with something like
-   * initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
-   *
-   * @param context
-   * @param reactInstanceManager
-   */
+    loginbtn.setOnClickListener {
+        val email = loginuser.text.toString().trim()
+        val password = loginpassword.text.toString().trim()
+
+        if (email.isEmpty()) {
+            Toast.makeText(
+                applicationContext, "Data is missing",Toast.LENGTH_LONG
+            ).show()
+            loginuser.error = "Email required"
+            loginuser.requestFocus()
+            return@setOnClickListener
+                    }
+
+
+        if (password.isEmpty()) {
+            loginpassword.error = "Password required"
+            loginpassword.requestFocus()
+            return@setOnClickListener
+        }
+
+        RetrofitClient.instance.userLogin(email, password)
+            .enqueue(object : Callback<LoginResponse> {
+                override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
+                    Log.d("res", "" + t)
+
+
+                }
+
+                override fun onResponse(
+                    call: Call<LoginResponse>,
+                    response: Response<LoginResponse>
+                ) {
+                    var res = response
+
+                    Log.d("response check ", "" + response.body()?.status.toString())
+                    if (res.body()?.status==200) {
+
+                        SharedPrefManager.getInstance(applicationContext)
+                            .saveUser(response.body()?.data!!)
+
+                        val intent = Intent(applicationContext, HomeActivity::class.java)
+                        intent.flags =
+                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        showToast(applicationContext,res.body()?.message)
+                        Log.d("kjsfgxhufb",response.body()?.status.toString())
+                        startActivity(intent)
+                        finish()
+
+
+                    }
+
+            else
+                    {
+                        try {
+                            val jObjError =
+                                JSONObject(response.errorBody()!!.string())
+
+                            showToast(applicationContext,jObjError.getString("user_msg"))
+                        } catch (e: Exception) {
+                            showToast(applicationContext,e.message)
+                            Log.e("errorrr",e.message)
+                        }
+                    }
+
+                }
+            })
+
+    }
+}}
   private static void initializeFlipper(
       Context context, ReactInstanceManager reactInstanceManager) {
     if (BuildConfig.DEBUG) {
