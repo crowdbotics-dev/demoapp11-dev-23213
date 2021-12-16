@@ -1,152 +1,45 @@
-import React, { useContext } from "react";
-import { OptionsContext } from "@options";
-import {
-  View,
-  ImageBackground,
-  Image,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
-import {
-  NavigationHelpersContext,
-  useNavigationBuilder,
-  TabRouter,
-  TabActions,
-  createNavigatorFactory,
-} from "@react-navigation/native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { createStackNavigator } from "@react-navigation/stack";
-import { slice } from "./auth";
-import { styles } from "./screens/styles";
-import { SignInTab, SignupTab } from "./screens/loginsignup";
-import PasswordReset from "./screens/reset";
+import React from "react";
 
-const LoginTabBar = ({ navigation, state, descriptors }) => {
+import styles from "./style";
+import { Alert, Image, Keyboard, KeyboardAvoidingView, Text, TextInput, TouchableWithoutFeedback, Pressable, View } from "react-native";
+import { Button, SocialIcon } from "react-native-elements";
+import * as Facebook from "expo-facebook";
 
-  const currentTab = state.routes[state.index];
+const appId = "1047121222092614";
+
+export default function LoginScreen() {
+  const onLoginPress = () => {};
+
+  const onFbLoginPress = async () => {
+    try {
+      await Facebook.initializeAsync({
+        appId,
+      });
+      const { type, token } = await Facebook.logInWithReadPermissionsAsync({
+        permissions: ["public_profile", "email"],
+      });
+      if (type === "success") {
+        const response = await fetch(`https://graph.facebook.com/me?access_token=${token}`);
+        Alert.alert("Logged in!", `Hi ${(await response.json()).name}!`);
+      }
+    } catch ({ message }) {
+      Alert.alert(`Facebook Login Error: ${message}`);
+    }
+  };
+
   return (
-    <View style={styles.tabStyle}>
-      {state.routes.map((route) => (
-        <View
-          key={route.key}
-          style={route.key == currentTab.key ? styles.activeTabStyle : null}
-        >
-          <TouchableOpacity
-            onPress={() => {
-              const event = navigation.emit({
-                type: "tabPress",
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (!event.defaultPrevented) {
-                navigation.dispatch({
-                  ...TabActions.jumpTo(route.name),
-                  target: state.key,
-                });
-              }
-            }}
-          >
-            <Text style={styles.tabStyle}>
-              {descriptors[route.key].options.title || route.name}
-            </Text>
-          </TouchableOpacity>
+    <KeyboardAvoidingView style={styles.containerView} behavior="padding">
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.loginScreenContainer}>
+          <View style={styles.loginFormView}>
+            <Text style={styles.logoText}>Instamobile</Text>
+            <TextInput placeholder="Username" placeholderColor="#c4c3cb" style={styles.loginFormTextInput} />
+            <TextInput placeholder="Password" placeholderColor="#c4c3cb" style={styles.loginFormTextInput} secureTextEntry={true} />
+            <Button buttonStyle={styles.loginButton} onPress={() => onLoginPress()} title="Login" />
+            <Button containerStyle={styles.fbLoginButton} type='clear' onPress={() => onFbLoginPress()} title="Login With Facebook" />
+          </View>
         </View>
-      ))}
-    </View>
-  );
-};
-
-function LoginSignupTabs({ initialRouteName, children, screenOptions }) {
-  const { state, navigation, descriptors } = useNavigationBuilder(TabRouter, {
-    children,
-    screenOptions,
-    initialRouteName,
-  });
-  const options = useContext(OptionsContext);
-  return (
-    <NavigationHelpersContext.Provider value={navigation}>
-      <KeyboardAwareScrollView contentContainerStyle={{ flex: 1 }}>
-        <ScrollView style={[styles.container]}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.imageContainer}>
-              <ImageBackground
-                source={{
-                  uri: options.BACKGROUND_URL,
-                }}
-                style={{
-                  flex: 1,
-                  justifyContent: "center",
-                  resizeMode: "cover",
-                  height: "100%",
-                  width: "100%",
-                }}
-              >
-                <Image
-                  source={{
-                    uri: options.LOGO_URL,
-                  }}
-                  style={{
-                    width: 155,
-                    height: 155,
-                    alignSelf: "center",
-                    resizeMode: "contain",
-                  }}
-                />
-              </ImageBackground>
-            </View>
-          </View>
-          <View style={[styles.cardView]}>
-            <LoginTabBar
-              navigation={navigation}
-              state={state}
-              descriptors={descriptors}
-            />
-            <View style={styles.tabContainerStyle}>
-              {descriptors[state.routes[state.index].key].render()}
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAwareScrollView>
-    </NavigationHelpersContext.Provider>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
-
-const createLoginNavigator = createNavigatorFactory(LoginSignupTabs);
-
-const LoginStack = createLoginNavigator();
-
-const LoginScreen = () => {
-  const options = useContext(OptionsContext)
-  return (
-    <LoginStack.Navigator>
-      <LoginStack.Screen
-        name="SignIn"
-        component={SignInTab}
-        options={{ title: options.SignInNavText }}
-      />
-      <LoginStack.Screen
-        name="SignUp"
-        component={SignupTab}
-        options={{ title: options.SignUpNavText }}
-      />
-    </LoginStack.Navigator>
-  );
-};
-
-const Stack = createStackNavigator();
-
-const Login = () => {
-  return (
-    <Stack.Navigator headerMode="none">
-      <Stack.Screen name="LoginScreen" component={LoginScreen} />
-      <Stack.Screen name="PasswordReset" component={PasswordReset} />
-    </Stack.Navigator>
-  );
-};
-
-export default {
-  title: "Login",
-  navigator: Login,
-  slice: slice,
-};
